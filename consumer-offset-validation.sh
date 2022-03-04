@@ -10,6 +10,7 @@ show_usage () {
     echo "    --osk-bootstrap-server [osk-bootstrap-server-list]"
     echo "    --ccloud-bootstrap-server [ccloud-bootstrap-server-list]"
     echo "    --command-config [command-config-file]"
+    echo "    --remove-unused-consumers [use this flag if there are a number of unused consumers on the source cluster]"
 
     return 0
 }
@@ -67,6 +68,10 @@ do
         fi
         CCLOUD_COMMAND_CONFIG="$2"
         echo "CCloud Command Config File path is: ${CCLOUD_COMMAND_CONFIG}"
+    elif [[ "$1" == "--remove-unused-consumers" ]]
+    then
+        REMOVE_INACTIVE_CONSUMERS=true
+        echo "Unused source consumers will be filtered from the consumer group data"
     fi
     shift
 done
@@ -79,6 +84,8 @@ FORMATTED_OSK_GROUP_DATA=(${PWD}/frmt_osk_group_data.txt)
 FORMATTED_CCLOUD_GROUP_DATA=(${PWD}/frmt_ccloud_group_data.txt)
 SORTED_OSK_GROUP_DATA=(${PWD}/sort_osk_group_data.txt)
 SORTED_CCLOUD_GROUP_DATA=(${PWD}/sort_ccloud_group_data.txt)
+PARSED_OSK_GROUP_DATA=(${PWD}/parsed_osk_group_data.txt)
+PARSED_CCLOUD_GROUP_DATA=(${PWD}/parsed_ccloud_group_data.txt)
 
 if [[ -z "$OSK_BOOTSTRAP_SERVERS"  ]] || [[ -z "$CCLOUD_BOOTSTRAP_SERVERS"  ]] || [[ -z "$CCLOUD_COMMAND_CONFIG"  ]]
 then
@@ -103,6 +110,8 @@ echo "Comparing consumer group data between the OSK and CCloud clusters to valid
 echo "Output written to" `date +"%d-%m-%y-%T"`"_diff.txt"
 echo ""
 
+if [[ "$REMOVE_UNUSED_CONSUMERS" = true ]]
+then
 cat ${CONSUMER_GROUPS} | while read -r group_name
 do
     if [[ -z "${group_name}" ]]
@@ -117,8 +126,52 @@ do
         awk -v col1=1 -v col2=2 -v col3=3 -v col4=4 -v col5=5 -v col6=6 '{print $col1, $col2, $col3, $col4, $col6}' ${OSK_GROUP_DATA} > ${FORMATTED_OSK_GROUP_DATA}
         awk -v col1=1 -v col2=2 -v col3=3 -v col4=4 -v col5=5 -v col6=6 '{print $col1, $col2, $col3, $col4, $col6}' ${CCLOUD_GROUP_DATA} > ${FORMATTED_CCLOUD_GROUP_DATA}
 
-        # If removing from the ${FORMATTED_CCLOUD_GROUP_DATA}, $5 if removing from the DIFF
-        #awk '$4 == "-" { next } { print }' "<txt file>"
+        # To remove the offset data for inactive consumers that is not synced over the link
+        awk '$4 == "-" { next } { print }' "${FORMATTED_OSK_GROUP_DATA}" > ${PARSED_OSK_GROUP_DATA}
+        awk '$4 == "-" { next } { print }' "${FORMATTED_CCLOUD_GROUP_DATA}" > ${PARSED_CCLOUD_GROUP_DATA}
+
+        # Sort the Consumer Group data by partition number for the diff command
+        printf "=================== OSK ===================" > ${SORTED_OSK_GROUP_DATA}
+        sort -t, -nk3 ${PARSED_OSK_GROUP_DATA} >> ${SORTED_OSK_GROUP_DATA}
+        printf "=================== CCLOUD ===================" > ${SORTED_CCLOUD_GROUP_DATA}
+        sort -t, -nk3 ${PARSED_CCLOUD_GROUP_DATA} >> ${SORTED_CCLOUD_GROUP_DATA}
+
+        # Diff the two sorted files
+        printf "=========================== Group Name: %s ============================\n" "${group_name}" >> ${DIFF}
+        diff ${SORTED_OSK_GROUP_DATA} ${SORTED_CCLOUD_GROUP_DATA} >> ${DIFF}
+        printf "\n" >> ${DIFF}
+    fi
+done
+
+# Cleanup temp files
+rm ${OSK_GROUP_DATA}
+rm ${CCLOUD_GROUP_DATA}
+rm ${FORMATTED_OSK_GROUP_DATA}
+rm ${FORMATTED_CCLOUD_GROUP_DATA}
+rm ${SORTED_OSK_GROUP_DATA}
+rm ${SORTED_CCLOUD_GROUP_DATA}
+rm ${PARSED_OSK_GROUP_DATA}
+rm ${PARSED_CCLOUD_GROUP_DATA}
+
+echo ""
+
+exit 0
+fi
+
+
+cat ${CONSUMER_GROUPS} | while read -r group_name
+do
+    if [[ -z "${group_name}" ]]
+    then
+        :
+    else
+        # Describe the Consumer Groups in SRC and DEST
+        kafka-consumer-groups --bootstrap-server ${OSK_BOOTSTRAP_SERVERS} --group ${group_name} --describe > ${OSK_GROUP_DATA}
+        kafka-consumer-groups --bootstrap-server ${CCLOUD_BOOTSTRAP_SERVERS} --command-config ${CCLOUD_COMMAND_CONFIG} --group ${group_name} --describe > ${CCLOUD_GROUP_DATA}
+
+        # Format the Consumer Group data to only include columns expected to match and remove unneeded consumer group data
+        awk -v col1=1 -v col2=2 -v col3=3 -v col4=4 -v col5=5 -v col6=6 '{print $col1, $col2, $col3, $col4, $col6}' ${OSK_GROUP_DATA} > ${FORMATTED_OSK_GROUP_DATA}
+        awk -v col1=1 -v col2=2 -v col3=3 -v col4=4 -v col5=5 -v col6=6 '{print $col1, $col2, $col3, $col4, $col6}' ${CCLOUD_GROUP_DATA} > ${FORMATTED_CCLOUD_GROUP_DATA}
 
         # Sort the Consumer Group data by partition number for the diff command
         printf "=================== OSK ===================" > ${SORTED_OSK_GROUP_DATA}

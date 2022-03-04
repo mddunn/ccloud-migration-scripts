@@ -11,6 +11,7 @@ show_usage () {
     echo "    --src-bootstrap-server [src-bootstrap-server-list]"
     echo "    --command-config-dest [dest-command-config-file]"
     echo "    --command-config-src [src-command-config-file]"
+    echo "    --remove-unused-consumers [use this flag if there are a number of unused consumers on the source cluster]"
 
     return 0
 }
@@ -79,6 +80,10 @@ do
         fi
         COMMAND_CONFIG_SRC="$2"
         echo "Source Command Config File path is: ${COMMAND_CONFIG_SRC}"
+    elif [[ "$1" == "--remove-unused-consumers" ]]
+    then
+        REMOVE_UNUSED_CONSUMERS=true
+        echo "Unused source consumers will be filtered from the consumer group data"
     fi
     shift
 done
@@ -93,6 +98,8 @@ FORMATTED_DEST_GROUP_DATA=(${PWD}/frmt_dest_group_data.txt)
 FORMATTED_SRC_GROUP_DATA=(${PWD}/frmt_src_group_data.txt)
 SORTED_DEST_GROUP_DATA=(${PWD}/sort_dest_group_data.txt)
 SORTED_SRC_GROUP_DATA=(${PWD}/sort_src_group_data.txt)
+PARSED_DEST_GROUP_DATA=(${PWD}/parsed_dest_group_data.txt)
+PARSED_SRC_GROUP_DATA=(${PWD}/parsed_src_group_data.txt)
 
 if [[ -z "$DEST_BOOTSTRAP_SERVERS"  ]] || [[ -z "$SRC_BOOTSTRAP_SERVERS"  ]] || [[ -z "$COMMAND_CONFIG_DEST"  ]] || [[ -z "$COMMAND_CONFIG_SRC"  ]]
 then
@@ -117,6 +124,57 @@ echo "Comparing consumer group data between the SRC and DEST clusters to validat
 echo "Output written to" `date +"%d-%m-%y-%T"`"_diff.txt"
 echo ""
 
+if [[ "$REMOVE_UNUSED_CONSUMERS" = true ]]
+then
+echo "================================================"
+echo "||Removing inactive consumer group information||"
+echo "================================================"
+cat ${CONSUMER_GROUPS} | while read -r group_name
+do
+    if [[ -z "${group_name}" ]]
+    then
+        :
+    else
+        # Describe the Consumer Groups in SRC and DEST
+        kafka-consumer-groups --bootstrap-server ${DEST_BOOTSTRAP_SERVERS} --command-config ${COMMAND_CONFIG_DEST} --group ${group_name} --describe > ${DEST_GROUP_DATA}
+        kafka-consumer-groups --bootstrap-server ${SRC_BOOTSTRAP_SERVERS} --command-config ${COMMAND_CONFIG_SRC} --group ${group_name} --describe > ${SRC_GROUP_DATA}
+
+        # Format the Consumer Group data to only include columns expected to match and remove unneeded consumer group data
+        awk -v col1=1 -v col2=2 -v col3=3 -v col4=4 -v col5=5 -v col6=6 '{print $col1, $col2, $col3, $col4, $col6}' ${SRC_GROUP_DATA} > ${FORMATTED_SRC_GROUP_DATA}
+        awk -v col1=1 -v col2=2 -v col3=3 -v col4=4 -v col5=5 -v col6=6 '{print $col1, $col2, $col3, $col4, $col6}' ${DEST_GROUP_DATA} > ${FORMATTED_DEST_GROUP_DATA}
+
+        # To remove the offset data for inactive consumers that is not synced over the link
+        awk '$4 == "-" { next } { print }' "${FORMATTED_SRC_GROUP_DATA}" > ${PARSED_SRC_GROUP_DATA}
+        awk '$4 == "-" { next } { print }' "${FORMATTED_DEST_GROUP_DATA}" > ${PARSED_DEST_GROUP_DATA}
+
+        # Sort the Consumer Group data by partition number for the diff command
+        printf "=================== SRC ===================" > ${SORTED_SRC_GROUP_DATA}
+        sort -t, -nk3 ${PARSED_SRC_GROUP_DATA} >> ${SORTED_SRC_GROUP_DATA}
+        printf "=================== DEST ===================" > ${SORTED_DEST_GROUP_DATA}
+        sort -t, -nk3 ${PARSED_DEST_GROUP_DATA} >> ${SORTED_DEST_GROUP_DATA}
+
+        # Diff the two sorted files
+        printf "=========================== Group Name: %s ============================\n" "${group_name}" >> ${DIFF}
+        diff ${SORTED_SRC_GROUP_DATA} ${SORTED_DEST_GROUP_DATA} >> ${DIFF}
+        printf "\n" >> ${DIFF}
+    fi
+done
+
+rm ${DEST_GROUP_DATA}
+rm ${SRC_GROUP_DATA}
+rm ${FORMATTED_DEST_GROUP_DATA}
+rm ${FORMATTED_SRC_GROUP_DATA}
+rm ${SORTED_DEST_GROUP_DATA}
+rm ${SORTED_SRC_GROUP_DATA}
+rm ${PARSED_DEST_GROUP_DATA}
+rm ${PARSED_SRC_GROUP_DATA}
+
+echo ""
+
+exit 0
+fi
+
+
 cat ${CONSUMER_GROUPS} | while read -r group_name
 do
     if [[ -z "${group_name}" ]]
@@ -139,7 +197,7 @@ do
 
         # Diff the two sorted files
         printf "=========================== Group Name: %s ============================\n" "${group_name}" >> ${DIFF}
-        diff -I "GROUP TOPIC PARTITION CURRENT-OFFSET LAG" ${SORTED_SRC_GROUP_DATA} ${SORTED_DEST_GROUP_DATA} >> ${DIFF}
+        diff ${SORTED_SRC_GROUP_DATA} ${SORTED_DEST_GROUP_DATA} >> ${DIFF}
         printf "\n" >> ${DIFF}
     fi
 done
