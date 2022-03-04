@@ -23,7 +23,8 @@ Example execution:
     --dest-bootstrap-server { DEST bootstrap URL } \
     --src-bootstrap-server { SRC bootstrap URL } \
     --command-config-dest { DEST properties } \
-    --command-config-src { SRC properties }
+    --command-config-src { SRC properties } \
+    --remove-unused-consumers
     
 Example properties files:
 
