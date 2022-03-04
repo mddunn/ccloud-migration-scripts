@@ -86,7 +86,6 @@ Example diff file output **removing** unused consumers (removing null offset dat
     < =================== SRC ===================
     ---
     > =================== DEST ===================
-    9,10d8
 
     =========================== Group Name: example-v3 ============================
     1c1
