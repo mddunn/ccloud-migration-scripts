@@ -146,6 +146,7 @@ A legend is printed with each consumer group to display which side of the diff i
 
                Config Name               |                 Config Value                 | Read Only | Sensitive |           Source            | Synonyms
     -----------------------------------------+----------------------------------------------+-----------+-----------+-----------------------------+-----------   
+    ...
     consumer.offset.group.filters          | {"groupFilters":[ {"name":                   | false     | false     | DYNAMIC_CLUSTER_LINK_CONFIG | []
                                            | "*", "patternType":                          |           |           |                             |
                                            | "LITERAL", "filterType":                     |           |           |                             |
