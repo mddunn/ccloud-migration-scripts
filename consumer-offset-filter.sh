@@ -11,6 +11,7 @@ show_usage () {
     echo "    --link-id [link-name]"
     echo "    --cluster [ccloud-cluster-id]"
     echo "    --environment [ccloud-environment-id]"
+    echo "    --exclude-all [use this flag to disable consumer offset sync]"
 
     return 0
 }
@@ -24,8 +25,11 @@ fi
 echo "============================================================================"
 echo ""
 echo "This script accepts a list of consumer groups to exclude from the offset sync functionality of the cluster link"
+echo ""
 
-command="consumer.offset.group.filters={\"groupFilters\":[ {\"name\": \"*\", \"patternType\": \"LITERAL\", \"filterType\": \"INCLUDE\"},"
+echo "============================================================================"
+echo "=============================== PARAMETERS ================================="
+echo ""
 
 while [ ! -z "$1" ]
 do
@@ -75,38 +79,59 @@ do
         fi
         environmentId="$2"
         echo "CCloud Environment ID: ${environmentId}"
+        shift
+    elif [[ "$1" == "--exclude-all" ]]
+    then
+        FILTER_ALL_CONSUMERS=true
+        echo "Unused source consumers will be filtered from the consumer group data"
     fi
     shift
 done
 
 
-if [[ -z "$inputFile"  ]] || [[ -z "$linkId"  ]] || [[ -z "$clusterId"  ]] || [[ -z "$environmentId"  ]]
+if [[ -z "$linkId"  ]] || [[ -z "$clusterId"  ]] || [[ -z "$environmentId"  ]]
 then
-    echo "--input-file, --link-id, --cluster, and --environment are required for execution."
+    echo "--link-id, --cluster, and --environment are required for execution."
     show_usage
     exit 1
 fi
 
-while IFS= read -r line || [[ "$line" ]];
-do 
-   command="${command}{\"name\": \"$line\", \"patternType\": \"LITERAL\", \"filterType\": \"EXCLUDE\"},"
-done < ${inputFile}
+
+if [[ ! -z "$inputFile" ]]
+then
+    command="consumer.offset.group.filters={\"groupFilters\":[ {\"name\": \"*\", \"patternType\": \"LITERAL\", \"filterType\": \"INCLUDE\"},"
+
+    while IFS= read -r line || [[ "$line" ]];
+    do
+        command="${command}{\"name\": \"$line\", \"patternType\": \"LITERAL\", \"filterType\": \"EXCLUDE\"},"
+    done < ${inputFile}
+    command="${command%?}]}"
+    shift
+elif [[ "$FILTER_ALL_CONSUMERS" = true ]]
+then
+    command="consumer.offset.sync.enable=false"
+
+else
+    echo "No input file or exclude all consumer group flag found"
+    show_usage
+    exit 1
+fi
 
 echo ""
 echo "============================================================================"
 echo "=============== Create New Configuration File for Link Update =============="
 echo ""
-command="${command%?}]}"
-echo "${command}" > cluster-link-update-offset-sync.config
 
-cat cluster-link-update-offset-sync.config
+echo "${command}" > cluster-link-update-offset-sync-${clusterId}.config
+
+cat cluster-link-update-offset-sync-${clusterId}.config
 
 echo ""
 echo "============================================================================"
 echo "========== Update the Cluster Link Consumer Group Offset Syncing ==========="
 echo ""
 
-confluent kafka link update ${linkId} --config-file cluster-link-update-offset-sync.config --cluster ${clusterId} --environment ${environmentId}
+confluent kafka link update ${linkId} --config-file cluster-link-update-offset-sync-${clusterId}.config --cluster ${clusterId} --environment ${environmentId}
 
 echo ""
 echo "============================================================================"
