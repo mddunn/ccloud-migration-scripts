@@ -6,8 +6,10 @@ Scripts to help automate the migration of applications to a new Confluent Cloud 
 
   1. Working cluster link between the source and destination cluster
   2. API keys created for the destination cluster (and the source cluster if migrating between Confluent Cloud clusters)
-  3. Mirror topics created (either automatically with the cluster link configuration or manually)
-  4. Kafka and Confluent CLI must be installed and referenced in your PATH
+  3. ACLs for both the source and destination cluster (if applicable)
+     https://docs.confluent.io/cloud/current/multi-cloud/cluster-linking/security-cloud.html
+  4. Mirror topics created (either automatically with the cluster link configuration or manually)
+  5. Kafka and Confluent CLI must be installed and referenced in your $PATH
 
 ## Description
 
@@ -30,7 +32,8 @@ A legend is printed with each consumer group to display which side of the diff i
     --src-bootstrap-server { SRC bootstrap URL } \
     --command-config-dest { DEST properties } \
     --command-config-src { SRC properties } \
-    --remove-unused-consumers
+    --remove-unused-consumers \
+    --input-file { list of target consumers }
     
 #### Example properties files:
 
@@ -181,7 +184,7 @@ A legend is printed with each consumer group to display which side of the diff i
     =========== Displaying mirror topic current status pre-promotion ===========
 
     Mirror Topic: test
-    confluent kafka mirror describe test --link test-link --cluster lkc-12rq15  --environment env-z8xj3
+    Command: confluent kafka mirror describe test --link test-link --cluster lkc-12rq15  --environment env-z8xj3
 
     Link Name | Mirror Topic Name | Partition | Partition Mirror Lag | Source Topic Name | Mirror Status | Status Time Ms | Last Source Fetch Offset
     ------------+-------------------+-----------+----------------------+-------------------+---------------+----------------+---------------------------
@@ -193,7 +196,7 @@ A legend is printed with each consumer group to display which side of the diff i
     test-link | test              |         4 |                    0 | test              | ACTIVE        |  1646336492686 |                        6
 
     Mirror Topic: test2
-    confluent kafka mirror describe test2 --link test-link --cluster lkc-12rq15  --environment env-z8xj3
+    Command: confluent kafka mirror describe test2 --link test-link --cluster lkc-12rq15  --environment env-z8xj3
 
     Link Name | Mirror Topic Name | Partition | Partition Mirror Lag | Source Topic Name | Mirror Status | Status Time Ms | Last Source Fetch Offset
     ------------+-------------------+-----------+----------------------+-------------------+---------------+----------------+---------------------------
@@ -208,7 +211,7 @@ A legend is printed with each consumer group to display which side of the diff i
     ============================================================================
     ========================= Promoting mirror topics ==========================
 
-    confluent kafka mirror promote test test2 --link test-link --cluster lkc-12rq15  --environment env-z8xj3
+    Command: confluent kafka mirror promote test test2 --link test-link --cluster lkc-12rq15  --environment env-z8xj3
 
     Mirror Topic Name | Partition | Partition Mirror Lag | Error Message | Error Code | Last Source Fetch Offset
     --------------------+-----------+----------------------+---------------+------------+---------------------------
@@ -230,7 +233,7 @@ A legend is printed with each consumer group to display which side of the diff i
     =========== Displaying mirror topic current status post-promotion ==========
 
     Mirror Topic: test
-    confluent kafka mirror describe test --link test-link --cluster lkc-12rq15  --environment env-z8xj3
+    Command: confluent kafka mirror describe test --link test-link --cluster lkc-12rq15  --environment env-z8xj3
 
     Link Name | Mirror Topic Name | Partition | Partition Mirror Lag | Source Topic Name | Mirror Status | Status Time Ms | Last Source Fetch Offset
     ------------+-------------------+-----------+----------------------+-------------------+---------------+----------------+---------------------------
@@ -242,7 +245,7 @@ A legend is printed with each consumer group to display which side of the diff i
     test-link | test              |         4 |                    0 | test              | STOPPED       |  1646430749830 |                        6
 
     Mirror Topic: test2
-    confluent kafka mirror describe test2 --link test-link --cluster lkc-12rq15  --environment env-z8xj3
+    Command: confluent kafka mirror describe test2 --link test-link --cluster lkc-12rq15  --environment env-z8xj3
 
     Link Name | Mirror Topic Name | Partition | Partition Mirror Lag | Source Topic Name | Mirror Status | Status Time Ms | Last Source Fetch Offset
     ------------+-------------------+-----------+----------------------+-------------------+---------------+----------------+---------------------------
@@ -252,3 +255,8 @@ A legend is printed with each consumer group to display which side of the diff i
     test-link | test2             |         2 |                    0 | test2             | STOPPED       |  1646430749751 |                       11
     test-link | test2             |         5 |                    0 | test2             | STOPPED       |  1646430749751 |                        5
     test-link | test2             |         4 |                    0 | test2             | STOPPED       |  1646430749751 |                        5
+
+    =========== Displaying target mirror topics still pending promotion ==========
+
+    TOPIC  PARTITION  STATUS
+    
