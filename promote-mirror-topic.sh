@@ -132,12 +132,12 @@ then
         mirrorTopics+=("$line")
     done < ${inputFile}
 
-#TEST BLOCK
-    confluent kafka mirror list > tmp-list-mirror.txt
-
-    #query all the active mirrors
-    awk -v topic=3 -v status=11  '{if ($status != "STOPPED" && $topic != "|" && $topic != "") {print $topic}}' tmp-list-mirror.txt > tmp-input.txt
-#TEST BLOCK
+##TEST BLOCK
+#    confluent kafka mirror list > tmp-list-mirror.txt
+#
+#    #query all the active mirrors
+#    awk -v topic=3 -v status=11  '{if ($status != "STOPPED" && $topic != "|" && $topic != "") {print $topic}}' tmp-list-mirror.txt > tmp-input.txt
+##TEST BLOCK
 
 elif [[ "$ACTIVE_MIRROR_TOPICS_FLAG" = true ]]
 then
