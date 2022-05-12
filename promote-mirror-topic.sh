@@ -79,13 +79,13 @@ do
         echo "CCloud Environment ID: ${environmentId}"
     elif [[ "$1" == "--all-active-mirror-topics" ]]
     then
-        ACTIVE_MIRROR_TOPICS_FLAG=true
+        activeMirrorTopicsFlag=true
         echo "Promoting all active mirror topics: true"
     fi
     shift
 done
 
-if [[ -z "$linkId"  ]] || [[ -z "$clusterId"  ]] || [[ -z "$environmentId"  ]] && [[ (! -z "$inputFile" || "$ACTIVE_MIRROR_TOPICS_FLAG" = "true") ]]
+if [[ -z "$linkId"  ]] || [[ -z "$clusterId"  ]] || [[ -z "$environmentId"  ]] || [[ (! -z "$inputFile" || "$activeMirrorTopicsFlag" != "true") ]]
 then
     echo "--input-file or --all-active-mirror-topics, --link-id, --cluster, and --environment are required for execution."
     show_usage
@@ -139,7 +139,7 @@ then
 #    awk -v topic=3 -v status=11  '{if ($status != "STOPPED" && $topic != "|" && $topic != "") {print $topic}}' tmp-list-mirror.txt > tmp-input.txt
 ##TEST BLOCK
 
-elif [[ "$ACTIVE_MIRROR_TOPICS_FLAG" = true ]]
+elif [[ "$activeMirrorTopicsFlag" = true ]]
 then
     #retrieve mirror topic list
     echo "================================================================"

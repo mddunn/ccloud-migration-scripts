@@ -82,16 +82,16 @@ do
         shift
     elif [[ "$1" == "--exclude-all" ]]
     then
-        FILTER_ALL_CONSUMERS=true
+        filterAllConsumers=true
         echo "Unused source consumers will be filtered from the consumer group data"
     fi
     shift
 done
 
 
-if [[ -z "$linkId"  ]] || [[ -z "$clusterId"  ]] || [[ -z "$environmentId"  ]]
+if [[ -z "$linkId"  ]] || [[ -z "$clusterId"  ]] || [[ -z "$environmentId"  ]] || [[ (! -z "$inputFile" || "$filterAllConsumers" = "true") ]]
 then
-    echo "--link-id, --cluster, and --environment are required for execution."
+    echo "--input-file or --exclude-all, --link-id, --cluster, and --environment are required for execution."
     show_usage
     exit 1
 fi
@@ -107,7 +107,7 @@ then
     done < ${inputFile}
     command="${command%?}]}"
     shift
-elif [[ "$FILTER_ALL_CONSUMERS" = true ]]
+elif [[ "$filterAllConsumers" = true ]]
 then
     command="consumer.offset.sync.enable=false"
 
