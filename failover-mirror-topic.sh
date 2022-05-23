@@ -11,7 +11,7 @@ show_usage () {
     echo "    --link-id [link-name]"
     echo "    --cluster [ccloud-cluster-id]"
     echo "    --environment [ccloud-environment-id]"
-    echo "    --all-active-mirror-topics [use this flag to promote all remaining active mirror topics]"
+    echo "    --all-active-mirror-topics [use this flag to failover all remaining active mirror topics]"
     return 0
 }
 
@@ -23,7 +23,7 @@ fi
 
 echo "============================================================================"
 echo ""
-echo "This script accepts a list of mirror topics to promote and help validate successful promotion"
+echo "This script accepts a list of mirror topics to fail over or fails over all mirror topics, and helps validate successful fail over"
 echo ""
 
 MIRROR_TOPIC_STATUS_FILE=(${PWD}/`date +"%d-%m-%y-%T"`_mirror_topic_status.txt)
@@ -77,17 +77,21 @@ do
         fi
         environmentId="$2"
         echo "CCloud Environment ID: ${environmentId}"
+        shift
     elif [[ "$1" == "--all-active-mirror-topics" ]]
     then
-        activeMirrorTopicsFlag=true
-        echo "Promoting all active mirror topics: true"
+        ACTIVE_MIRROR_TOPICS_FLAG=true
+        echo "Failing over all active mirror topics: true"
     fi
     shift
 done
 
-if [[ -z "$linkId"  ]] || [[ -z "$clusterId"  ]] || [[ -z "$environmentId"  ]] || [[ (-z "$inputFile" && "$activeMirrorTopicsFlag" != "true") ]]
+if [[ -z "$linkId"  ]] || [[ -z "$clusterId"  ]] || [[ -z "$environmentId"  ]] || [[ (! -z "$inputFile" || "$ACTIVE_MIRROR_TOPICS_FLAG" != "true") ]]
 then
+    echo ""
+    echo "Invalid usage:"
     echo "--input-file or --all-active-mirror-topics, --link-id, --cluster, and --environment are required for execution."
+    echo ""
     show_usage
     exit 1
 fi
@@ -124,7 +128,7 @@ if [[ ! -z "$inputFile"  ]]
 then
     if [[ ! -s ${inputFile} ]]
     then
-        echo "No topics to promote!"
+        echo "No topics to failover!"
         exit 1
     fi
     while IFS= read -r line || [[ "$line" ]];
@@ -139,7 +143,7 @@ then
 #    awk -v topic=3 -v status=11  '{if ($status != "STOPPED" && $topic != "|" && $topic != "") {print $topic}}' tmp-list-mirror.txt > tmp-input.txt
 ##TEST BLOCK
 
-elif [[ "$activeMirrorTopicsFlag" = true ]]
+elif [[ "$ACTIVE_MIRROR_TOPICS_FLAG" = true ]]
 then
     #retrieve mirror topic list
     echo "================================================================"
@@ -154,7 +158,7 @@ then
     if [[ ! -s tmp-input.txt ]]
     then
         echo ""
-        echo "No topics to promote!"
+        echo "No topics to failover!"
         echo ""
         #clean up the temp files
         rm tmp-input.txt
@@ -181,7 +185,7 @@ fi
 #Describe takes in one topic at a time
 echo ""
 echo "============================================================================"
-echo "=========== Displaying mirror topic current status pre-promotion ==========="
+echo "=========== Displaying mirror topic current status pre-failover ==========="
 echo ""
 
 describe_mirror_topic
@@ -189,26 +193,26 @@ describe_mirror_topic
 #Promoting mirror topics
 echo ""
 echo "============================================================================"
-echo "========================= Promoting mirror topics =========================="
+echo "========================= Failing over mirror topics =========================="
 echo ""
 echo "Command: confluent kafka mirror promote ${mirrorTopics[*]} --link ${linkId} --cluster ${clusterId}  --environment ${environmentId}"
 echo ""
 
-confluent kafka mirror promote ${mirrorTopics[*]} --link ${linkId} --cluster ${clusterId}  --environment ${environmentId}
+confluent kafka mirror failover ${mirrorTopics[*]} --link ${linkId} --cluster ${clusterId}  --environment ${environmentId}
 
 #Describe topics again after they've been promoted
 echo ""
 sleep 15
 echo "Wait while the topics are promoted"
 echo ""
-echo "=========== Displaying mirror topic current status post-promotion =========="
+echo "=========== Displaying mirror topic current status post-failover =========="
 echo ""
 
 describe_mirror_topic
 describe_mirror_topic_write
 #describe_mirror_topic_write_test
 
-echo "=========== Displaying target mirror topics still pending promotion =========="
+echo "=========== Displaying target mirror topics still pending failover =========="
 echo ""
 awk -v topic=3 -v partition=5 -v status=11 'NR==1 {print "TOPIC","PARTITION","STATUS"} {if ($status != "STOPPED" && $topic != "|" && $topic != "")  {gsub(/"/,""); print $topic, $partition, $status}}' ${MIRROR_TOPIC_STATUS_FILE} | column -t > tmp-input-mirror-state.txt
 cat tmp-input-mirror-state.txt
