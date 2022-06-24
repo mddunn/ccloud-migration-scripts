@@ -89,7 +89,7 @@ do
 done
 
 
-if [[ -z "$linkId"  ]] || [[ -z "$clusterId"  ]] || [[ -z "$environmentId"  ]] || [[ ((-z "$inputFile" && "$filterAllConsumers" = "true") || (-z "$inputFile" && "$filterAllConsumers" != "true")) ]]
+if [[ -z "$linkId"  ]] || [[ -z "$clusterId"  ]] || [[ -z "$environmentId"  ]] || [[ (-z "$inputFile" && "$filterAllConsumers" != "true") ]]
 then
     echo "--input-file or --exclude-all, --link-id, --cluster, and --environment are required for execution."
     show_usage
