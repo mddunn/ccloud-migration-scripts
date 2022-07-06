@@ -21,7 +21,7 @@ Typically, the scripts will be run in the following order as part of the migrati
 
 ### consumer-offset-validation.sh
 
-This script validates that consumer offsets are successfully synced over the cluster link from source to destination
+This script validates that consumer offsets are successfully synced over the cluster link from source to destination. If no input file is provided, ALL consumer groups are compared
 
 A legend is printed with each consumer group to display which side of the diff is the source and which is the destination
 
