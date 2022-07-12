@@ -11,7 +11,7 @@ show_usage () {
     echo "    --ccloud-bootstrap-server [ccloud-bootstrap-server-list]"
     echo "    --command-config [command-config-file]"
     echo "    --remove-unused-consumers [use this flag if there are a number of unused consumers on the source cluster]"
-    echo "    --input-file [file containing a list of target consumer groups]"
+    echo "    --input-file [file containing a list of target consumer groups, if this isn't provided all consumers will be compared]"
 
     return 0
 }
@@ -143,7 +143,7 @@ then
 
                 # Diff the two sorted files
                 printf "=========================== Group Name: %s ============================\n" "${group_name}" >> ${DIFF}
-                diff ${PARSED_SRC_GROUP_DATA} ${PARSED_CCLOUD_GROUP_DATA} >> ${DIFF}
+                diff -w ${PARSED_SRC_GROUP_DATA} ${PARSED_CCLOUD_GROUP_DATA} >> ${DIFF}
                 printf "\n" >> ${DIFF}
             fi
         done
@@ -166,7 +166,7 @@ then
 
                 # Diff the two sorted files
                 printf "=========================== Group Name: %s ============================\n" "${group_name}" >> ${DIFF}
-                diff ${PARSED_SRC_GROUP_DATA} ${PARSED_CCLOUD_GROUP_DATA} >> ${DIFF}
+                diff -w ${PARSED_SRC_GROUP_DATA} ${PARSED_CCLOUD_GROUP_DATA} >> ${DIFF}
                 printf "\n" >> ${DIFF}
             fi
         done
@@ -211,7 +211,7 @@ else
         awk -v col1=1 -v col2=2 -v col3=3 -v col4=4 -v col5=5 -v col6=6 '$col4 == "-" { next } {print $col1, $col2, $col3, $col4, $col6}' ${CCLOUD_GROUP_DATA} | sort -t, -nk3 | column -t >> ${PARSED_CCLOUD_GROUP_DATA}
 
         # Diff the two sorted files
-        diff ${PARSED_SRC_GROUP_DATA} ${PARSED_CCLOUD_GROUP_DATA} >> ${DIFF}
+        diff -w ${PARSED_SRC_GROUP_DATA} ${PARSED_CCLOUD_GROUP_DATA} >> ${DIFF}
         printf "\n" >> ${DIFF}
 
     else
@@ -227,7 +227,7 @@ else
         awk -v col1=1 -v col2=2 -v col3=3 -v col4=4 -v col5=5 -v col6=6 '{print $col1, $col2, $col3, $col4, $col6}' ${CCLOUD_GROUP_DATA} | sort -t, -nk3 | column -t >> ${PARSED_CCLOUD_GROUP_DATA}
 
         # Diff the two sorted files
-        diff ${PARSED_SRC_GROUP_DATA} ${PARSED_CCLOUD_GROUP_DATA} >> ${DIFF}
+        diff -w ${PARSED_SRC_GROUP_DATA} ${PARSED_CCLOUD_GROUP_DATA} >> ${DIFF}
         printf "\n" >> ${DIFF}
     fi
 

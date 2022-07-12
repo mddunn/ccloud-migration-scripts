@@ -146,7 +146,7 @@ then
     echo ""
     echo "Retrieving list of mirror topics that are not in a Stopped state"
 
-    confluent kafka mirror list > tmp-list-mirror.txt
+    confluent kafka mirror list --link ${linkId} --cluster ${clusterId}  --environment ${environmentId} > tmp-list-mirror.txt
 
     #query all the active mirrors
     awk -v topic=3 -v status=11  '{if ($status != "STOPPED" && $topic != "|" && $topic != "") {print $topic}}' tmp-list-mirror.txt > tmp-input.txt
