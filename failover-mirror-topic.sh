@@ -113,7 +113,7 @@ describe_mirror_topic_write () {
 
     for index in "${!mirrorTopics[@]}";
 	  do
-        confluent kafka mirror describe ${mirrorTopics[$index]} --link ${linkId} --cluster ${clusterId}  --environment ${environmentId} >> ${MIRROR_TOPIC_STATUS_FILE}
+        confluent kafka mirror describe ${mirrorTopics[$index]} --link ${linkId} --cluster ${clusterId}  --environment ${environmentId} | tee --append  ${MIRROR_TOPIC_STATUS_FILE}
 	  done
 	  return 0
 }
@@ -188,7 +188,7 @@ echo "==========================================================================
 echo "=========== Displaying mirror topic current status pre-failover ==========="
 echo ""
 
-describe_mirror_topic
+#describe_mirror_topic
 
 #Promoting mirror topics
 echo ""
@@ -208,7 +208,7 @@ echo ""
 echo "=========== Displaying mirror topic current status post-failover =========="
 echo ""
 
-describe_mirror_topic
+#describe_mirror_topic
 describe_mirror_topic_write
 #describe_mirror_topic_write_test
 
