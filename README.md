@@ -15,9 +15,10 @@ Scripts to help automate the migration of applications to a new Confluent Cloud 
 
 Typically, the scripts will be run in the following order as part of the migration:
 
-  1. consumer-offset-validation.sh
-  2. consumer-offset-filter.sh
-  3. promote-mirror-topic.sh
+  1. mirroring-validation.sh
+  2. consumer-offset-validation.sh
+  3. consumer-offset-filter.sh
+  4. promote-mirror-topic.sh
 
 ### consumer-offset-validation.sh
 
