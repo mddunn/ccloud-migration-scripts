@@ -45,14 +45,16 @@ Two log files are output: one that does not filter partitions with no data on th
     
 #### Example output:
 
-**File 1:**
+*File 1*
+    
     TOPIC           PARTITION  MIRROR_LAG  STATUS  LAST_FETCH_OFFSET
     example.topic1  1          56347       ACTIVE  56347
     example.topic1  5          57283       ACTIVE  57283
     example.topic1  4          0           ACTIVE  0
     example.topic1  7          0           ACTIVE  0
     
-**File 2:**
+*File 2*
+    
     TOPIC           PARTITION  MIRROR_LAG  STATUS  LAST_FETCH_OFFSET
     example.topic1  1          56347       ACTIVE  56347
     example.topic1  5          57283       ACTIVE  57283
