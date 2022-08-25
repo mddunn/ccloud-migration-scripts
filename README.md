@@ -6,7 +6,7 @@ Scripts to help automate the migration of applications to a new Confluent Cloud 
 
   1. Working cluster link between the source and destination cluster
   2. API keys created for the destination cluster (and the source cluster if migrating between Confluent Cloud clusters)
-  3. ACLs for both the source and destination cluster (if applicable)
+  3. Required ACLs (if applicable)
      https://docs.confluent.io/cloud/current/multi-cloud/cluster-linking/security-cloud.html
   4. Mirror topics created (either automatically with the cluster link configuration or manually)
   5. Kafka and Confluent CLI must be installed and referenced in your $PATH
@@ -20,6 +20,43 @@ Typically, the scripts will be run in the following order as part of the migrati
   3. consumer-offset-filter.sh
   4. promote-mirror-topic.sh
 
+### mirroring-validation.sh
+
+This script validates that all source partition data is being appropriately mirrored to the destination. During migrations, issues have been observed where a few partitions are not being mirrored correctly between the source and destination. This is typically caught when the mirror lag and last source fetch offset are equal and non-zero
+
+Two log files are output: one that does not filter partitions with no data on the source and one that does
+
+#### Example execution:
+    
+    ./mirroring-validation.sh \
+    --input-file { input file } \
+    --link-id { link name } \
+    --cluster { destination cluster ID } \
+    --environment { environment ID } \
+    --all-active-mirror-topics
+    
+#### Example properties files:
+
+    bootstrap.servers={ bootstrap URL }
+    ssl.endpoint.identification.algorithm=https
+    security.protocol=SASL_SSL
+    sasl.mechanism=PLAIN
+    sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="{ username }" password="{ password }";
+    
+#### Example output:
+
+**File 1:**
+    TOPIC           PARTITION  MIRROR_LAG  STATUS  LAST_FETCH_OFFSET
+    example.topic1  1          56347       ACTIVE  56347
+    example.topic1  5          57283       ACTIVE  57283
+    example.topic1  4          0           ACTIVE  0
+    example.topic1  7          0           ACTIVE  0
+    
+**File 2:**
+    TOPIC           PARTITION  MIRROR_LAG  STATUS  LAST_FETCH_OFFSET
+    example.topic1  1          56347       ACTIVE  56347
+    example.topic1  5          57283       ACTIVE  57283
+    
 ### consumer-offset-validation.sh
 
 This script validates that consumer offsets are successfully synced over the cluster link from source to destination. If no input file is provided, ALL consumer groups are compared
@@ -77,11 +114,11 @@ A legend is printed with each consumer group to display which side of the diff i
     > example-v3 example-topic3 2 83082 2
     > example-v3 example-topic3 3 107846 1
     8,9c8,9
-    < example-v3 load.routes.v2 5 70157 0
-    < example-v3 load.routes.v2 6 44621 0
+    < example-v3 example-topic3 5 70157 0
+    < example-v3 example-topic3 6 44621 0
     ---
-    > example-v3 load.routes.v2 5 70156 1
-    > example-v3 load.routes.v2 6 44620 1
+    > example-v3 example-topic3 5 70156 1
+    > example-v3 example-topic3 6 44620 1
     
 #### Example diff file output **removing** unused consumers (removing null offset data):
 
@@ -113,11 +150,11 @@ A legend is printed with each consumer group to display which side of the diff i
     > example-v3 example-topic3 2 83082 2
     > example-v3 example-topic3 3 107846 1
     8,9c8,9
-    < example-v3 load.routes.v2 5 70157 0
-    < example-v3 load.routes.v2 6 44621 0
+    < example-v3 example-topic3 5 70157 0
+    < example-v3 example-topic3 6 44621 0
     ---
-    > example-v3 load.routes.v2 5 70156 1
-    > example-v3 load.routes.v2 6 44620 1
+    > example-v3 example-topic3 5 70156 1
+    > example-v3 example-topic3 6 44620 1
  
  ### consumer-offset-filter.sh
  
